@@ -4,7 +4,6 @@ import android.os.Bundle;
 import android.util.Log;
 
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
-import com.google.android.material.snackbar.Snackbar;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
@@ -17,6 +16,7 @@ import android.view.MenuItem;
 import android.content.res.AssetManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.widget.ImageView;
 import androidx.annotation.NonNull;
 import java.io.IOException;
 import java.io.InputStream;
@@ -47,6 +47,7 @@ public class MainActivity extends AppCompatActivity{
 	OnFailureListener onFailureListener = new OnFailureListener(){
 		@Override
 		public void onFailure( @NonNull Exception e ){
+			// Task failed with an exception
 			Log.w( TAG, "●OnFailureListener()" );
 		}
 	};
@@ -54,11 +55,20 @@ public class MainActivity extends AppCompatActivity{
 	OnSuccessListener onSuccessListener = new OnSuccessListener<FirebaseVisionText>(){
 		@Override
 		public void onSuccess( FirebaseVisionText result ){
+			// Task completed successfully
 			Log.d( TAG, "●onSuccess()" + result.getText() );
+
+			overlayView.clear();
 			for( FirebaseVisionText.TextBlock block : result.getTextBlocks() ){
 				String blockText = block.getText();
 				Log.d( TAG, String.format( "●[%s]", blockText ) );
+				for( FirebaseVisionText.Line line : block.getLines() ){
+					for( FirebaseVisionText.Element element : line.getElements() ){
+						overlayView.add( new TextGraphic( overlayView, element ) );
+					}
+				}
 			}
+
 		}
 	};
 
@@ -69,20 +79,39 @@ public class MainActivity extends AppCompatActivity{
 		Toolbar toolbar = findViewById( R.id.toolbar );
 		setSupportActionBar( toolbar );
 
+		FloatingActionButton fab = findViewById( R.id.fab );
+		fab.setOnClickListener( new View.OnClickListener(){
+			@Override
+			public void onClick( View view ){
+			}
+		} );
+	}
+
+	OverlayView overlayView;
+	@Override
+	public void onWindowFocusChanged( boolean hasFocus ){
+		super.onWindowFocusChanged( hasFocus );
+		Log.d( TAG, "●onWindowFocusChanged()" );
+
 		Bitmap bitmap = getBitmapFromAsset( "sample.jpg" );
+		ImageView imageView = (ImageView)findViewById( R.id.image_view );
+		float fScaleW = (float)bitmap.getWidth() / imageView.getWidth();
+		Log.d( TAG, String.format( "W %d / %d = %.5f", bitmap.getWidth(),  imageView.getWidth(), fScaleW ) );
+		float fScaleH = (float)bitmap.getHeight() / imageView.getHeight();
+		Log.d( TAG, String.format( "H %d / %d = %.5f", bitmap.getHeight(),  imageView.getHeight(), fScaleH ) );
+		overlayView = findViewById( R.id.overlay );
+		//左上を原点に対象画像を画面に収めた時の縦横どちらかの隙間分を加算する
+		if( fScaleW > fScaleH ){//縮小しないほうが正しくデジタル数値認識
+			overlayView.setImageInfo( bitmap.getWidth(), (int)(imageView.getHeight()*fScaleW) );
+		}else{
+			overlayView.setImageInfo( (int)(imageView.getWidth()*fScaleH), bitmap.getHeight() );
+		}
+		imageView.setImageBitmap( bitmap );
 		FirebaseVisionImage image = FirebaseVisionImage.fromBitmap( bitmap );
 		FirebaseVisionTextRecognizer recognizer = FirebaseVision.getInstance().getOnDeviceTextRecognizer();
 		Task task = recognizer.processImage( image );
 		task.addOnSuccessListener( onSuccessListener );
 		task.addOnFailureListener( onFailureListener );
-
-		FloatingActionButton fab = findViewById( R.id.fab );
-		fab.setOnClickListener( new View.OnClickListener(){
-			@Override
-			public void onClick( View view ){
-				Snackbar.make( view, "Replace with your own action", Snackbar.LENGTH_LONG ).setAction( "Action", null ).show();
-			}
-		} );
 	}
 
 	@Override

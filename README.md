@@ -18,6 +18,8 @@ HTC HTL23 (Android 5.0.2)
 
 Samsung Galaxy S7 edge (Andorid 7.0)
 
+ASUS_X01AD(Android 9)
+
 Pixel4 (Andorid 11)
 
 ## article
